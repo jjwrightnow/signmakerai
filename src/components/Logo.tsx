@@ -1,5 +1,5 @@
-import { Sparkles } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import brainLogo from '@/assets/brain-logo.png';
 
 interface LogoProps {
   size?: 'sm' | 'md' | 'lg';
@@ -14,15 +14,21 @@ export function Logo({ size = 'md', showBeta = true }: LogoProps) {
   };
 
   const iconSizes = {
-    sm: 16,
-    md: 24,
-    lg: 32,
+    sm: 20,
+    md: 28,
+    lg: 40,
   };
 
   return (
     <div className="flex items-center gap-2">
       <div className="flex items-center gap-1.5">
-        <Sparkles className="text-primary" size={iconSizes[size]} />
+        <img 
+          src={brainLogo} 
+          alt="SignMaker.ai Logo" 
+          width={iconSizes[size]} 
+          height={iconSizes[size]}
+          className="object-contain"
+        />
         <span className={`font-semibold tracking-tight ${sizeClasses[size]}`}>
           SignMaker<span className="text-primary">.ai</span>
         </span>
