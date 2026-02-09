@@ -253,7 +253,7 @@ export default function Chat() {
               )}
             </form>
             <p className="text-xs text-muted-foreground text-center mt-3">
-              SignMaker.ai provides general guidance — always verify codes with local authorities.
+              SignMaker.ai is an informational reference tool only — not a substitute for professional judgment.
             </p>
           </div>
         </div>
