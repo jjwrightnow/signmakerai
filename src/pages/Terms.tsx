@@ -27,61 +27,60 @@ export default function Terms() {
             <h2 className="text-2xl font-semibold text-foreground mt-8 mb-4">1. Nature of the Service</h2>
             <p>
               SignMaker.ai is an informational reference and data-organization tool.
-              It is not a professional advisory service.
             </p>
             <p className="mt-4">The Service allows users to store, retrieve, and reference:</p>
             <ul className="list-disc list-inside space-y-2 mt-4">
-              <li>Personal preferences, constraints, and decisions submitted by the user</li>
+              <li>User-submitted preferences, constraints, and decisions</li>
               <li>Company-approved reference information</li>
             </ul>
             <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-6 my-4">
               <p>
                 The Service does not provide instructions, specifications, recommendations, or guidance 
-                related to physical activities or regulated work.
+                related to physical activities, regulated work, or professional judgment.
               </p>
             </div>
           </section>
 
           <section>
-            <h2 className="text-2xl font-semibold text-foreground mt-8 mb-4">2. No Professional Advice</h2>
+            <h2 className="text-2xl font-semibold text-foreground mt-8 mb-4">2. No Professional or Operational Advice</h2>
             <p>SignMaker.ai does not provide advice or guidance related to:</p>
             <ul className="list-disc list-inside space-y-2 mt-4">
               <li>Fabrication or manufacturing</li>
               <li>Installation or assembly</li>
               <li>Electrical systems</li>
               <li>Structural support or load considerations</li>
-              <li>Safety procedures</li>
-              <li>Regulatory or code compliance</li>
-              <li>Risk mitigation or hazard analysis</li>
+              <li>Safety procedures or risk mitigation</li>
+              <li>Regulatory, code, or compliance matters</li>
+              <li>"Best practices" or standards implying correctness</li>
             </ul>
             <p className="mt-4">
               All information is provided for general informational purposes only.
             </p>
             <p className="mt-4">
-              Users are solely responsible for determining the appropriateness of any decisions made outside the Service.
+              Users remain solely responsible for any real-world actions or decisions made outside the Service.
             </p>
           </section>
 
           <section>
             <h2 className="text-2xl font-semibold text-foreground mt-8 mb-4">3. User-Controlled Memory</h2>
-            <p>Any stored "memory" exists only because the user explicitly saved it.</p>
+            <p>Any stored "memory" exists only because a user explicitly saved it.</p>
             <ul className="list-disc list-inside space-y-2 mt-4">
               <li>The Service does not autonomously learn or infer preferences</li>
-              <li>Users may edit or delete memories at any time</li>
-              <li>Deleted memories are no longer used in future responses</li>
+              <li>The Service does not write to memory without user action</li>
+              <li>Users may edit or delete memory at any time</li>
+              <li>Deleted memory is no longer used in future responses</li>
             </ul>
-            <p className="mt-4">The Service does not retain hidden or implied memory.</p>
+            <p className="mt-4">The Service does not retain hidden, inferred, or implied memory.</p>
           </section>
 
           <section>
             <h2 className="text-2xl font-semibold text-foreground mt-8 mb-4">4. Company Knowledge</h2>
-            <p>
-              Company knowledge is visible only to members of the same company and is subject to 
-              internal company governance.
-            </p>
-            <p className="mt-4">
-              The Service does not validate, endorse, or verify company knowledge.
-            </p>
+            <p>Company knowledge is created and governed by the user's organization.</p>
+            <ul className="list-disc list-inside space-y-2 mt-4">
+              <li>It is visible only to members of the same company</li>
+              <li>It is not verified, endorsed, or validated by SignMaker.ai</li>
+            </ul>
+            <p className="mt-4">The Service acts only as a reference mechanism.</p>
           </section>
 
           <section>
@@ -93,7 +92,7 @@ export default function Terms() {
               <li>Decisions made by users outside the Service</li>
               <li>Reliance on informational content</li>
               <li>Errors, omissions, or outdated information</li>
-              <li>Consequences of actions taken based on Service output</li>
+              <li>Outcomes resulting from actions taken based on Service output</li>
             </ul>
           </section>
 
@@ -102,8 +101,8 @@ export default function Terms() {
             <p>By using the Service, you acknowledge that:</p>
             <ul className="list-disc list-inside space-y-2 mt-4">
               <li>The Service is informational only</li>
-              <li>You retain full responsibility for any real-world actions or decisions</li>
-              <li>The Service does not replace professional judgment</li>
+              <li>It does not replace professional judgment</li>
+              <li>You retain full responsibility for real-world decisions and actions</li>
             </ul>
           </section>
 
