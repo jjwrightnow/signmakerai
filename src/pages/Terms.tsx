@@ -106,6 +106,18 @@ export default function Terms() {
               <li>The Service does not replace professional judgment</li>
             </ul>
           </section>
+
+          <div className="border-t border-border pt-8 mt-12 flex flex-wrap gap-4">
+            <Button variant="outline" asChild>
+              <Link to="/privacy">Privacy Policy</Link>
+            </Button>
+            <Button variant="outline" asChild>
+              <Link to="/risk-liability">Risk & Liability Posture</Link>
+            </Button>
+            <Button variant="outline" asChild>
+              <Link to="/review-control">Review & Change Control</Link>
+            </Button>
+          </div>
         </div>
       </main>
     </div>
