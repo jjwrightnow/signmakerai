@@ -166,7 +166,7 @@ export default function Chat() {
                   <Bot className="h-12 w-12 text-primary mx-auto mb-4" />
                   <h2 className="text-xl font-semibold mb-2">Ask your sign industry question</h2>
                   <p className="text-muted-foreground">
-                    Get answers about materials, installation, and codes — informed by your saved knowledge.
+                    Get answers about materials and signage — informed by your saved knowledge.
                   </p>
                 </div>
               </div>
