@@ -47,12 +47,16 @@ const Index = () => {
       <main className="flex-1 flex items-center justify-center px-6">
         <div className="max-w-2xl mx-auto text-center">
           <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight mb-6">
-            Get it right the{' '}
-            <span className="text-primary">first time.</span>
+            Your decisions,{' '}
+            <span className="text-primary">organized.</span>
           </h1>
           
-          <p className="text-lg md:text-xl text-muted-foreground mb-10 max-w-xl mx-auto">
-            Proven specs and decisions — so small questions don't become expensive rework.
+          <p className="text-lg md:text-xl text-muted-foreground mb-4 max-w-xl mx-auto">
+            An informational reference and decision-tracking tool for sign industry professionals.
+          </p>
+
+          <p className="text-sm text-muted-foreground mb-10 max-w-lg mx-auto">
+            SignMaker.ai is an information and reference tool only and does not provide instructions, specifications, or advice related to physical work, safety, compliance, or regulated activities.
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
