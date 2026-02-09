@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { ChatSidebar } from '@/components/ChatSidebar';
@@ -6,13 +6,33 @@ import { useAuth } from '@/lib/auth';
 import { useToast } from '@/hooks/use-toast';
 import { Send, Loader2, Bot, User as UserIcon, Square } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { streamChat } from '@/lib/stream-chat';
+import { streamChat, type MemoryRecord } from '@/lib/stream-chat';
+import { supabase } from '@/integrations/supabase/client';
+import { MemoryIndicator } from '@/components/chat/MemoryIndicator';
 import ReactMarkdown from 'react-markdown';
 
 interface Message {
   id: string;
   role: 'user' | 'assistant';
   content: string;
+  memories?: MemoryRecord[];
+  referencedMemoryIds?: string[];
+}
+
+// Extract <!-- memory:MEM-uuid --> references from AI response
+function extractMemoryReferences(content: string): string[] {
+  const regex = /<!-- memory:MEM-([a-f0-9-]+) -->/g;
+  const ids: string[] = [];
+  let match;
+  while ((match = regex.exec(content)) !== null) {
+    ids.push(match[1]);
+  }
+  return ids;
+}
+
+// Strip memory comment tags from display content
+function stripMemoryTags(content: string): string {
+  return content.replace(/<!-- memory:MEM-[a-f0-9-]+ -->/g, '').trim();
 }
 
 export default function Chat() {
@@ -24,12 +44,31 @@ export default function Chat() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const abortRef = useRef<AbortController | null>(null);
+  // Track memories for the current streaming message
+  const pendingMemoriesRef = useRef<MemoryRecord[]>([]);
 
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [messages]);
+
+  const handleDeleteMemory = useCallback(async (memory: MemoryRecord) => {
+    if (memory.scope !== 'personal') return;
+    const { error } = await supabase.from('user_memories').delete().eq('id', memory.id);
+    if (error) {
+      toast({ title: 'Delete failed', description: 'Could not delete memory.', variant: 'destructive' });
+    } else {
+      toast({ title: 'Memory deleted' });
+      // Remove from all messages
+      setMessages((prev) =>
+        prev.map((m) => ({
+          ...m,
+          memories: m.memories?.filter((mem) => mem.id !== memory.id),
+        }))
+      );
+    }
+  }, [toast]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -41,13 +80,13 @@ export default function Chat() {
       content: input.trim(),
     };
 
-    const updatedMessages = [...messages, userMessage];
-    setMessages(updatedMessages);
+    setMessages((prev) => [...prev, userMessage]);
     setInput('');
     setLoading(true);
 
     const assistantId = crypto.randomUUID();
     let assistantContent = '';
+    pendingMemoriesRef.current = [];
 
     const controller = new AbortController();
     abortRef.current = controller;
@@ -57,19 +96,38 @@ export default function Chat() {
       conversationHistory: messages.map((m) => ({ role: m.role, content: m.content })),
       accessToken: session?.access_token,
       signal: controller.signal,
+      onMemories: (memories) => {
+        pendingMemoriesRef.current = memories;
+      },
       onDelta: (chunk) => {
         assistantContent += chunk;
+        const referencedMemoryIds = extractMemoryReferences(assistantContent);
+
         setMessages((prev) => {
           const last = prev[prev.length - 1];
+          const msgData: Message = {
+            id: assistantId,
+            role: 'assistant',
+            content: assistantContent,
+            memories: pendingMemoriesRef.current,
+            referencedMemoryIds,
+          };
           if (last?.role === 'assistant' && last.id === assistantId) {
-            return prev.map((m) =>
-              m.id === assistantId ? { ...m, content: assistantContent } : m
-            );
+            return prev.map((m) => (m.id === assistantId ? msgData : m));
           }
-          return [...prev, { id: assistantId, role: 'assistant', content: assistantContent }];
+          return [...prev, msgData];
         });
       },
       onDone: () => {
+        // Final pass to extract all referenced IDs
+        const finalIds = extractMemoryReferences(assistantContent);
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === assistantId
+              ? { ...m, content: assistantContent, referencedMemoryIds: finalIds }
+              : m
+          )
+        );
         setLoading(false);
         abortRef.current = null;
       },
@@ -136,9 +194,18 @@ export default function Chat() {
                       )}
                     >
                       {message.role === 'assistant' ? (
-                        <div className="prose prose-sm dark:prose-invert max-w-none text-secondary-foreground">
-                          <ReactMarkdown>{message.content}</ReactMarkdown>
-                        </div>
+                        <>
+                          <div className="prose prose-sm dark:prose-invert max-w-none text-secondary-foreground">
+                            <ReactMarkdown>{stripMemoryTags(message.content)}</ReactMarkdown>
+                          </div>
+                          {message.memories && message.memories.length > 0 && (
+                            <MemoryIndicator
+                              memories={message.memories}
+                              referencedIds={message.referencedMemoryIds || []}
+                              onDelete={handleDeleteMemory}
+                            />
+                          )}
+                        </>
                       ) : (
                         <p className="text-sm whitespace-pre-wrap">{message.content}</p>
                       )}

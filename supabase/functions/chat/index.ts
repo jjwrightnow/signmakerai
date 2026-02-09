@@ -25,12 +25,16 @@ NEUTRALITY RULES:
 
 MEMORY BEHAVIOR:
 - You may receive injected context from the user's personal decision memory and their company's approved knowledge.
+- Each memory has an ID in brackets like [MEM-abc123]. When your response is influenced by a specific memory, reference its ID using this exact format:
+  <!-- memory:MEM-abc123 -->
+  This tag is invisible to the user but lets the UI highlight which memories influenced the answer.
 - Memory marked "strict" is NON-NEGOTIABLE — always follow it unless it would create a safety hazard.
 - Memory marked "standard" is ADVISORY — follow it by default but you may suggest alternatives with explanation.
 - Memory marked "tentative" is INFORMATIONAL — consider it but feel free to suggest better approaches.
 - If your advice conflicts with any saved memory, you MUST explicitly explain why you are diverging.
-- When memory influences your response, disclose it clearly using this format:
-  📋 **Based on your saved knowledge:** [brief reference to the memory used]
+- When memory influences your response, disclose it naturally in your answer. For example:
+  "Based on your saved preference for 5-inch depth channel letters, I'd recommend..."
+  Do NOT use emoji prefixes like 📋 — keep it conversational.
 
 RESPONSE STYLE:
 - Be direct and practical. Sign professionals value clarity over verbosity.
@@ -52,32 +56,55 @@ const INDUSTRY_CONTEXT = `REFERENCE KNOWLEDGE (General sign industry standards):
 - Always verify local sign codes — they override national standards`;
 
 // ============================================================
+// Memory type with metadata for frontend
+// ============================================================
+interface MemoryRecord {
+  id: string;
+  content: string;
+  memory_type: string;
+  confidence: string;
+  tags: string[];
+  scope: "personal" | "company";
+}
+
+// ============================================================
 // HELPER: Fetch user memories (LAYER 3)
 // ============================================================
-async function fetchUserMemories(supabase: any, userId: string): Promise<string> {
+async function fetchUserMemories(supabase: any, userId: string): Promise<{ prompt: string; records: MemoryRecord[] }> {
   const { data, error } = await supabase
     .from("user_memories")
-    .select("content, memory_type, confidence, tags")
+    .select("id, content, memory_type, confidence, tags")
     .eq("user_id", userId)
     .eq("memory_scope", "personal")
     .order("updated_at", { ascending: false })
     .limit(20);
 
-  if (error || !data || data.length === 0) return "";
+  if (error || !data || data.length === 0) return { prompt: "", records: [] };
 
-  const formatted = data.map((m: any) => {
-    const tagStr = m.tags?.length ? ` [tags: ${m.tags.join(", ")}]` : "";
-    return `- [${m.confidence.toUpperCase()}] (${m.memory_type}) ${m.content}${tagStr}`;
+  const records: MemoryRecord[] = data.map((m: any) => ({
+    id: m.id,
+    content: m.content,
+    memory_type: m.memory_type,
+    confidence: m.confidence,
+    tags: m.tags || [],
+    scope: "personal" as const,
+  }));
+
+  const formatted = records.map((m) => {
+    const tagStr = m.tags.length ? ` [tags: ${m.tags.join(", ")}]` : "";
+    return `- [MEM-${m.id}] [${m.confidence.toUpperCase()}] (${m.memory_type}) ${m.content}${tagStr}`;
   }).join("\n");
 
-  return `\nUSER PERSONAL MEMORY (apply according to confidence level):\n${formatted}`;
+  return {
+    prompt: `\nUSER PERSONAL MEMORY (apply according to confidence level):\n${formatted}`,
+    records,
+  };
 }
 
 // ============================================================
 // HELPER: Fetch company knowledge (LAYER 4)
 // ============================================================
-async function fetchCompanyKnowledge(supabase: any, userId: string): Promise<string> {
-  // First get user's company
+async function fetchCompanyKnowledge(supabase: any, userId: string): Promise<{ prompt: string; records: MemoryRecord[] }> {
   const { data: membership } = await supabase
     .from("company_members")
     .select("company_id")
@@ -85,24 +112,36 @@ async function fetchCompanyKnowledge(supabase: any, userId: string): Promise<str
     .limit(1)
     .maybeSingle();
 
-  if (!membership) return "";
+  if (!membership) return { prompt: "", records: [] };
 
   const { data, error } = await supabase
     .from("company_knowledge")
-    .select("content, memory_type, tags")
+    .select("id, content, memory_type, tags")
     .eq("company_id", membership.company_id)
     .eq("status", "approved")
     .order("updated_at", { ascending: false })
     .limit(15);
 
-  if (error || !data || data.length === 0) return "";
+  if (error || !data || data.length === 0) return { prompt: "", records: [] };
 
-  const formatted = data.map((k: any) => {
-    const tagStr = k.tags?.length ? ` [tags: ${k.tags.join(", ")}]` : "";
-    return `- (${k.memory_type}) ${k.content}${tagStr}`;
+  const records: MemoryRecord[] = data.map((k: any) => ({
+    id: k.id,
+    content: k.content,
+    memory_type: k.memory_type,
+    confidence: "standard",
+    tags: k.tags || [],
+    scope: "company" as const,
+  }));
+
+  const formatted = records.map((k) => {
+    const tagStr = k.tags.length ? ` [tags: ${k.tags.join(", ")}]` : "";
+    return `- [MEM-${k.id}] (${k.memory_type}) ${k.content}${tagStr}`;
   }).join("\n");
 
-  return `\nCOMPANY APPROVED KNOWLEDGE (treat as standard-confidence guidelines):\n${formatted}`;
+  return {
+    prompt: `\nCOMPANY APPROVED KNOWLEDGE (treat as standard-confidence guidelines):\n${formatted}`,
+    records,
+  };
 }
 
 // ============================================================
@@ -120,8 +159,9 @@ serve(async (req) => {
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
     // Build context layers
-    let memoryContext = "";
-    let companyContext = "";
+    let memoryPrompt = "";
+    let companyPrompt = "";
+    let allMemoryRecords: MemoryRecord[] = [];
 
     // Check for authenticated user to inject memories
     const authHeader = req.headers.get("Authorization");
@@ -130,18 +170,17 @@ serve(async (req) => {
       const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
       const supabase = createClient(supabaseUrl, supabaseKey);
 
-      // Extract user from JWT
       const token = authHeader.replace("Bearer ", "");
       const { data: { user }, error: authError } = await supabase.auth.getUser(token);
 
       if (user && !authError) {
-        // Fetch layers 3 & 4 in parallel
-        const [memories, knowledge] = await Promise.all([
+        const [memoriesResult, knowledgeResult] = await Promise.all([
           fetchUserMemories(supabase, user.id),
           fetchCompanyKnowledge(supabase, user.id),
         ]);
-        memoryContext = memories;
-        companyContext = knowledge;
+        memoryPrompt = memoriesResult.prompt;
+        companyPrompt = knowledgeResult.prompt;
+        allMemoryRecords = [...memoriesResult.records, ...knowledgeResult.records];
       }
     }
 
@@ -149,8 +188,8 @@ serve(async (req) => {
     const fullSystemPrompt = [
       SYSTEM_PROMPT,
       "\n" + INDUSTRY_CONTEXT,
-      memoryContext,
-      companyContext,
+      memoryPrompt,
+      companyPrompt,
     ].filter(Boolean).join("\n");
 
     // Build messages array
@@ -158,14 +197,12 @@ serve(async (req) => {
       { role: "system", content: fullSystemPrompt },
     ];
 
-    // Include conversation history if provided
     if (conversationHistory && Array.isArray(conversationHistory)) {
       for (const msg of conversationHistory) {
         messages.push({ role: msg.role, content: msg.content });
       }
     }
 
-    // Add current user message
     messages.push({ role: "user", content: message });
 
     // Call AI gateway with streaming
@@ -203,7 +240,34 @@ serve(async (req) => {
       );
     }
 
-    return new Response(response.body, {
+    // Create a composite stream: metadata event first, then AI stream
+    const encoder = new TextEncoder();
+    const metadataEvent = allMemoryRecords.length > 0
+      ? `data: ${JSON.stringify({ type: "memory_context", memories: allMemoryRecords })}\n\n`
+      : "";
+
+    const aiBody = response.body!;
+    const compositeStream = new ReadableStream({
+      async start(controller) {
+        // Emit memory metadata as first event
+        if (metadataEvent) {
+          controller.enqueue(encoder.encode(metadataEvent));
+        }
+        // Pipe through AI stream
+        const reader = aiBody.getReader();
+        try {
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            controller.enqueue(value);
+          }
+        } finally {
+          controller.close();
+        }
+      },
+    });
+
+    return new Response(compositeStream, {
       headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
     });
   } catch (e) {
