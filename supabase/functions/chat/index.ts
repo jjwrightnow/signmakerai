@@ -145,6 +145,92 @@ async function fetchCompanyKnowledge(supabase: any, userId: string): Promise<{ p
 }
 
 // ============================================================
+// INPUT VALIDATION
+// ============================================================
+const MAX_MESSAGE_LENGTH = 10000;
+const MAX_HISTORY_LENGTH = 50;
+const VALID_ROLES = ["user", "assistant"];
+
+function validateInput(body: unknown): { message: string; conversationHistory: Array<{ role: string; content: string }> } | Response {
+  if (!body || typeof body !== "object") {
+    return new Response(
+      JSON.stringify({ error: "Invalid request body" }),
+      { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+
+  const { message, conversationHistory } = body as Record<string, unknown>;
+
+  // Validate message
+  if (typeof message !== "string") {
+    return new Response(
+      JSON.stringify({ error: "Invalid message format" }),
+      { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+
+  const trimmedMessage = message.trim();
+  if (trimmedMessage.length === 0) {
+    return new Response(
+      JSON.stringify({ error: "Message cannot be empty" }),
+      { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+
+  if (trimmedMessage.length > MAX_MESSAGE_LENGTH) {
+    return new Response(
+      JSON.stringify({ error: `Message too long (max ${MAX_MESSAGE_LENGTH} characters)` }),
+      { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+
+  // Validate conversation history
+  const history = conversationHistory ?? [];
+  if (!Array.isArray(history)) {
+    return new Response(
+      JSON.stringify({ error: "Invalid conversation history format" }),
+      { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+
+  if (history.length > MAX_HISTORY_LENGTH) {
+    return new Response(
+      JSON.stringify({ error: `Conversation history too long (max ${MAX_HISTORY_LENGTH} messages)` }),
+      { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+
+  const validatedHistory: Array<{ role: string; content: string }> = [];
+  for (const item of history) {
+    if (!item || typeof item !== "object") {
+      return new Response(
+        JSON.stringify({ error: "Invalid conversation history item" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const { role, content } = item as Record<string, unknown>;
+    if (typeof role !== "string" || !VALID_ROLES.includes(role)) {
+      return new Response(
+        JSON.stringify({ error: "Invalid message role in history" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (typeof content !== "string" || content.length > MAX_MESSAGE_LENGTH) {
+      return new Response(
+        JSON.stringify({ error: "Invalid or too-long content in history" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    validatedHistory.push({ role, content });
+  }
+
+  return { message: trimmedMessage, conversationHistory: validatedHistory };
+}
+
+// ============================================================
 // MAIN HANDLER
 // ============================================================
 serve(async (req) => {
@@ -153,7 +239,11 @@ serve(async (req) => {
   }
 
   try {
-    const { message, conversationHistory } = await req.json();
+    const body = await req.json();
+    const validated = validateInput(body);
+    if (validated instanceof Response) return validated;
+
+    const { message, conversationHistory } = validated;
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
