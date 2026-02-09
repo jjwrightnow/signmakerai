@@ -14,6 +14,7 @@ import Terms from "./pages/Terms";
 import Privacy from "./pages/Privacy";
 import RiskLiability from "./pages/RiskLiability";
 import ReviewControl from "./pages/ReviewControl";
+import ForbiddenLanguage from "./pages/ForbiddenLanguage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -33,6 +34,7 @@ const App = () => (
             <Route path="/privacy" element={<Privacy />} />
             <Route path="/risk-liability" element={<RiskLiability />} />
             <Route path="/review-control" element={<ReviewControl />} />
+            <Route path="/forbidden-language" element={<ForbiddenLanguage />} />
             <Route
               path="/memory"
               element={
