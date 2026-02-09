@@ -139,7 +139,7 @@ export default function Profile() {
               Delete Account
             </AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently delete your account and all your saved notes. 
+              This will permanently delete your account and all your saved memories. 
               This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>

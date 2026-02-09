@@ -35,7 +35,7 @@ export default function Privacy() {
                 details to enhance your experience
               </li>
               <li>
-                <strong>User-Generated Content:</strong> Knowledge, notes, and questions you submit
+                <strong>User-Generated Content:</strong> Memories, decisions, and questions you submit
               </li>
               <li>
                 <strong>Usage Data:</strong> Information about how you interact with our platform

@@ -8,7 +8,7 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Chat from "./pages/Chat";
-import Notes from "./pages/Notes";
+import Memory from "./pages/Memory";
 import Profile from "./pages/Profile";
 import Terms from "./pages/Terms";
 import Privacy from "./pages/Privacy";
@@ -30,10 +30,10 @@ const App = () => (
             <Route path="/terms" element={<Terms />} />
             <Route path="/privacy" element={<Privacy />} />
             <Route
-              path="/notes"
+              path="/memory"
               element={
                 <ProtectedRoute>
-                  <Notes />
+                  <Memory />
                 </ProtectedRoute>
               }
             />
